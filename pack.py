@@ -25,14 +25,23 @@ def get_pyinstaller_args():
     """获取PyInstaller打包参数"""
     system = platform.system()
     
-    # 基础参数
-    args = [
-        "pyinstaller",
-        "--onefile",          # 打包成单文件
-        "--windowed",         # 隐藏控制台窗口
-        "--clean",            # 清理临时文件
-        "--noconfirm",        # 不询问覆盖
-    ]
+    # 基础参数 - 在Windows下使用python -m pyinstaller
+    if system == "Windows":
+        args = [
+            sys.executable, "-m", "PyInstaller",
+            "--onefile",          # 打包成单文件
+            "--windowed",         # 隐藏控制台窗口
+            "--clean",            # 清理临时文件
+            "--noconfirm",        # 不询问覆盖
+        ]
+    else:
+        args = [
+            "pyinstaller",
+            "--onefile",          # 打包成单文件
+            "--windowed",         # 隐藏控制台窗口
+            "--clean",            # 清理临时文件
+            "--noconfirm",        # 不询问覆盖
+        ]
     
     # 添加数据文件
     if os.path.exists("config.json"):
@@ -63,7 +72,17 @@ def get_pyinstaller_args():
 
 def create_spec_file():
     """创建自定义的spec文件"""
-    spec_content = '''# -*- mode: python ; coding: utf-8 -*-
+    # 动态构建数据文件列表
+    datas = []
+    if os.path.exists("config.json"):
+        datas.append("('config.json', '.')")
+    if os.path.exists("wallpaper_basic.png"):
+        datas.append("('wallpaper_basic.png', '.')")
+    
+    datas_str = ",\n        ".join(datas) if datas else ""
+    
+    spec_content = f'''# -*- mode: python ; coding: utf-8 -*-
+import os
 
 block_cipher = None
 
@@ -72,12 +91,11 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[
-        ('config.json', '.'),
-        ('wallpaper_basic.png', '.'),
+        {datas_str}
     ],
     hiddenimports=[],
     hookspath=[],
-    hooksconfig={},
+    hooksconfig={{}},
     runtime_hooks=[],
     excludes=[],
     win_no_prefer_redirects=False,
@@ -144,7 +162,7 @@ def pack_application():
         if system == "Darwin":  # macOS
             # 创建spec文件用于macOS app bundle
             create_spec_file()
-            cmd = ["pyinstaller", "BirthdayPlayer.spec"]
+            cmd = [sys.executable, "-m", "PyInstaller", "BirthdayPlayer.spec"]
         else:
             # 直接使用命令行参数
             cmd = get_pyinstaller_args()
